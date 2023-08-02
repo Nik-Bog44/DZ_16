@@ -3,6 +3,7 @@ import json
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 
+from app.data_loader import load_data
 from models import db, User, Order, Offer
 
 app = Flask(__name__)
@@ -10,28 +11,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['RESTS_JSON'] = {'unsure_ascii': False, 'indent': 4}
 
-
 db = SQLAlchemy(app)
 
 
-def load_data_from_json(json_file, model_class):
-    with open(json_file, 'r') as file:
-        data = json.load(file)
-        for item in data:
-            new_entry = model_class(**item)
-            db.session.add(new_entry)
-    db.session.commit()
-    # Создание таблиц в базе данных
-    db.create_all()
-    # Путь к файлам JSON в директории Data
-    users_file = 'Data/users.json'
-    orders_file = 'Data/orders.json'
-    offers_file = 'Data/offers.json'
-
-    # Загрузка данных из JSON файлов в соответствующие таблицы
-    load_data_from_json(users_file, User)
-    load_data_from_json(orders_file, Order)
-    load_data_from_json(offers_file, Offer)
 
 
 # Маршрут для получения всех пользователей
@@ -256,4 +238,7 @@ def delete_offer(offer_id):
 
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()  # Создание таблиц базы данных
+        load_data()  # Заполнение таблиц данными
     app.run(debug=True)
