@@ -11,7 +11,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['RESTS_JSON'] = {'unsure_ascii': False, 'indent': 4}
 
-db = SQLAlchemy(app)
+db.init_app(app)
 
 
 
