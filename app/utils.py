@@ -1,7 +1,6 @@
-import json
+
 
 from flask import Flask, jsonify, request
-from flask_sqlalchemy import SQLAlchemy
 
 from app.data_loader import load_data
 from models import db, User, Order, Offer
@@ -82,6 +81,28 @@ def update_user(user_id):
     db.session.commit()
     return jsonify({"message": "User updated successfully"}), 200
 
+@app.route("/users", methods=["POST"])
+def create_user():
+    # Получение данных из тела запроса
+    data = request.json
+
+    # Создание нового объекта User на основе полученных данных
+    new_user = User(
+        first_name=data["first_name"],
+        last_name=data["last_name"],
+        age=data["age"],
+        email=data["email"],
+        role=data["role"],
+        phone=data["phone"]
+    )
+
+    # Добавление нового пользователя в базу данных
+    db.session.add(new_user)
+    db.session.commit()
+
+    # Возвращение ответа с сообщением об успешном создании
+    return jsonify({"message": "User created successfully"}), 201
+
 
 # DELETE-запрос для удаления пользователя по идентификатору
 @app.route("/users/<int:user_id>", methods=["DELETE"])
@@ -99,7 +120,23 @@ def delete_user(user_id):
 @app.route("/orders", methods=["GET"])
 def get_all_orders():
     orders = Order.query.all()
-    return jsonify([order.serialize_order() for order in orders]), 200
+    order_list = []
+    for order in orders:
+        # Создание словаря с данными о пользователе
+        order_data = {
+            "id": order.id,
+            "name": order.name,
+            "description": order.description,
+            "start_date": order.start_date,
+            "end_date": order.end_date,
+            "address": order.address,
+            "price": order.price
+        }
+        # Добавление данных о пользователе в список
+        order_list.append(order_data)
+    # Преобразование списка в формат JSON и возвращение его в ответе
+    return jsonify(order_list),200
+
 
 
 # GET-запрос для получения заказа по идентификатору
@@ -108,7 +145,18 @@ def get_order_by_id(order_id):
     order = Order.query.get(order_id)
     if not order:
         return jsonify({"message": "Order not found"}), 404
-    return jsonify(order.serialize_order()), 200
+        # Создание словаря с данными о пользователе
+    order_data = {
+            "id": order.id,
+            "name": order.name,
+            "description": order.description,
+            "start_date": order.start_date,
+            "end_date": order.end_date,
+            "address": order.address,
+            "price": order.price
+        }
+    # Возвращаем данные о заказе и статус 200
+    return jsonify(order_data), 200
 
 
 @app.route("/orders", methods=["POST"])
@@ -116,14 +164,22 @@ def create_order():
     data = request.json
     if not data:
         return jsonify({"message": "No data provided"}), 400
+    new_order = Order(
+        name=data["name"],
+        description=data["description"],
+        start_date=data["start_date"],
+        end_date=data["end_date"],
+        address=data["address"],
+        price=data["price"]
+    )
 
-    order = Order()
-    order.update_fr
-
-    db.session.add(order)
+    # Добавление нового пользователя в базу данных
+    db.session.add(new_order)
     db.session.commit()
 
-    return jsonify(order.serialize()), 201
+    # Возвращение ответа с сообщением об успешном создании
+    return jsonify({"message": "Order created successfully"}), 201
+
 
 
 @app.route("/orders/<int:order_id>", methods=["PUT"])
@@ -131,16 +187,18 @@ def update_order(order_id):
     order = Order.query.get(order_id)
     if not order:
         return jsonify({"message": "Order not found"}), 404
-
     data = request.json
-    if not data:
-        return jsonify({"message": "No data provided"}), 400
 
-    order.update_from_json(data)
+    order.name = data["name"],
+    order.description = data["description"],
+    order.start_date = data["start_date"],
+    order.end_date = data["end_date"],
+    order.address = data["address"],
+    order.price = data["price"]
+
     db.session.commit()
 
-    return jsonify(order.serialize_order()), 200
-
+    return jsonify({"message": "User updated successfully"}), 200
 
 @app.route("/orders/<int:order_id>", methods=["DELETE"])
 def delete_order(order_id):
@@ -158,7 +216,17 @@ def delete_order(order_id):
 @app.route("/offers", methods=["GET"])
 def get_all_offers():
     offers = Offer.query.all()
-    return jsonify([offer.serialize_offer() for offer in offers]), 200
+    offer_list = []
+    for offer in offers:
+        offer_data = {
+             "id": offer.id,
+            "order_id": offer.order_id,
+            "executor_id": offer.executor_id
+        }
+
+        offer_list.append(offer_data)
+
+    return jsonify(offer_list)
 
 
 # GET-запрос для получения предложения по идентификатору
@@ -167,31 +235,30 @@ def get_offer_by_id(offer_id):
     offer = Offer.query.get(offer_id)
     if not offer:
         return jsonify({"message": "Offer not found"}), 404
-    return jsonify(offer.serialize_offer()), 200
+    offer_data = {
+        "id": offer.id,
+        "order_id": offer.order_id,
+        "executor_id": offer.executor_id
+    }
+
+    return jsonify(offer_data)
+
+@app.route("/offers<int:offer_id>", methods=["PUT"])
+def update_offer(offer_id):
+    offer = Offer.query.get(offer_id)
+    if not offer:
+        return jsonify({"message": "Offer not found"}), 404
+
+    data = request.json  # Получаем данные из тела запроса (JSON)
+    offer.offer_id = data["offer_id "]
+    offer.executor_id = data["executor_id"]
+    offer.order_id = data["order_id"]
 
 
-# Вспомогательная функция для обновления атрибутов заказа из JSON
-def update_order_from_json(order, data):
-    if "name" in data:
-        order.name = data["name"]
-    if "description" in data:
-        order.description = data["description"]
-    if "start_date" in data:
-        order.start_date = data["start_date"]
-    if "end_date" in data:
-        order.end_date = data["end_date"]
-    if "address" in data:
-        order.address = data["address"]
-    if "price" in data:
-        order.price = data["price"]
+    db.session.commit()
+    return jsonify({"message": "Offer updated successfully"}), 200
 
 
-# Вспомогательная функция для обновления атрибутов предложения из JSON
-def update_offer_from_json(offer, data):
-    if "order_id" in data:
-        offer.order_id = data["order_id"]
-    if "executor_id" in data:
-        offer.executor_id = data["executor_id"]
 
 
 @app.route("/offers", methods=["POST"])
@@ -200,29 +267,20 @@ def create_offer():
     if not data:
         return jsonify({"message": "No data provided"}), 400
 
-    offer = Offer()
-    offer.update_from_json(data)
+    new_offer = Offer(
+        id=data["id"],
+        order_id=data["order_id"],
+        executor_id=data["executor_id"]
+    )
 
-    db.session.add(offer)
+
+    db.session.add(new_offer)
     db.session.commit()
 
-    return jsonify(offer.serialize()), 201
+    return jsonify({"message": "Offer created successfully"}), 201
 
 
-@app.route("/offers/<int:offer_id>", methods=["PUT"])
-def update_offer(offer_id):
-    offer = Offer.query.get(offer_id)
-    if not offer:
-        return jsonify({"message": "Offer not found"}), 404
 
-    data = request.json
-    if not data:
-        return jsonify({"message": "No data provided"}), 400
-
-    offer.update_from_json(data)
-    db.session.commit()
-
-    return jsonify(offer.serialize()), 200
 
 
 @app.route("/offers/<int:offer_id>", methods=["DELETE"])
